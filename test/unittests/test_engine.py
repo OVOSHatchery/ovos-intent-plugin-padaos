@@ -12,7 +12,7 @@ class TestPadaos(unittest.TestCase):
 
         intents = PadaosExtractor()
 
-        weather = ["weather"]
+        weather = ["weather", "the weather"]
         hello = ["hey", "hello", "hi", "greetings"]
         name = ["my name is {name}"]
         joke = ["tell me a joke", "i want a joke", "say a joke", "tell joke"]
@@ -141,23 +141,23 @@ class TestPadaos(unittest.TestCase):
         test_intent("hello, tell me a joke",
                     {'hello': ["hello"], 'tell me a joke': ["joke"]})
         test_intent("tell me a joke and the weather",
-                    {'the weather': [], 'tell me a joke': ["joke"]})
+                    {'the weather': ["weather"], 'tell me a joke': ["joke"]})
 
         # unknown intents
         test_intent("nice work! get me a beer",
-                    {'get me a beer': [], 'nice work': []})
+                    {'get me a beer': ["unknown"], 'nice work': ["unknown"]})
 
         # failed segmentation (no markers to split)
         test_intent("tell me a joke order some pizza",
-                    {'tell me a joke order some pizza': []})
+                    {'tell me a joke order some pizza': ["unknown"]})
         test_intent("call mom tell her hello",
                     {'call mom tell her hello': ['call_person']})
         test_intent("close the door turn off the lights",
-                    {'close the door turn off the lights': []})
+                    {'close the door turn off the lights': ["unknown"]})
         test_intent("close the pod bay doors play some music",
-                    {'close the pod bay doors play some music': []})
+                    {'close the pod bay doors play some music': ["unknown"]})
         test_intent("turn on the lights close the door",
-                    {'turn on the lights close the door': []})
+                    {'turn on the lights close the door': ["unknown"]})
 
     def test_segment_main_secondary_intent(self):
         # segment -> get intent -> get intent from utt remainder
@@ -188,7 +188,7 @@ class TestPadaos(unittest.TestCase):
                     {'say hello': "unknown",
                      'tell me a joke': "joke"})
         test_intent("tell me a joke and the weather",
-                    {'the weather': 'unknown',
+                    {'the weather': 'weather',
                      'tell me a joke': "joke"})
         test_intent("turn off the lights, open the door",
                     {'turn off the lights': "lights_off",
