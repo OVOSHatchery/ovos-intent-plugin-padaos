@@ -1,13 +1,15 @@
 from padaos import IntentContainer
-from ovos_plugin_manager.templates.intents import IntentExtractor
+from ovos_plugin_manager.intents import IntentExtractor, IntentPriority, IntentDeterminationStrategy
 from ovos_utils.log import LOG
 
 
 class PadaosExtractor(IntentExtractor):
-    keyword_based = False
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, config=None,
+                 strategy=IntentDeterminationStrategy.SEGMENT_MULTI,
+                 priority=IntentPriority.REGEX_MEDIUM,
+                 segmenter=None):
+        super().__init__(config, strategy=strategy,
+                         priority=priority, segmenter=segmenter)
         self.container = IntentContainer()
 
     def detach_intent(self, intent_name):
