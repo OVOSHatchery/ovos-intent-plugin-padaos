@@ -3,6 +3,14 @@ from ovos_plugin_manager.intents import IntentExtractor, IntentPriority, IntentD
 from ovos_utils.log import LOG
 
 
+def _munge(name, skill_id):
+    return f"{name}:{skill_id}"
+
+
+def _unmunge(munged):
+    return munged.split(":", 2)
+
+
 class PadaosExtractor(IntentExtractor):
     def __init__(self, config=None,
                  strategy=IntentDeterminationStrategy.SEGMENT_MULTI,
@@ -18,28 +26,30 @@ class PadaosExtractor(IntentExtractor):
             self.engines[lang] = IntentContainer()
         return self.engines[lang]
 
-    def register_entity(self, entity_name, samples=None, lang=None):
+    def register_entity(self, skill_id, entity_name, samples=None, lang=None):
         lang = lang or self.lang
+        super().register_entity(skill_id, entity_name, samples, lang)
         container = self._get_engine(lang)
         samples = samples or [entity_name]
-        super().register_entity(entity_name, samples, lang)
         container.add_entity(entity_name, samples)
 
-    def register_intent(self, intent_name, samples=None, lang=None):
+    def register_intent(self, skill_id, intent_name, samples=None, lang=None):
         lang = lang or self.lang
+        super().register_intent(skill_id, intent_name, samples, lang)
         container = self._get_engine(lang)
         samples = samples or [intent_name]
-        super().register_intent(intent_name, samples, lang)
+        intent_name = _munge(intent_name, skill_id)
         container.add_intent(intent_name, samples)
 
-    def detach_intent(self, intent_name):
+    def detach_intent(self, skill_id, intent_name):
         for intent in self.registered_intents:
-            if intent.name != intent_name:
+            if intent.name != intent_name or intent.skill_id != skill_id:
                 continue
             LOG.debug("Detaching padaos intent: " + intent_name)
-            for lang in self.engines:
-                with self.lock:
-                    self.engines[lang].remove_intent(intent_name)
+            with self.lock:
+                for lang in self.engines:
+                    self.engines[lang].remove_intent(_munge(intent.name,
+                                                            intent.skill_id))
         super().detach_intent(intent_name)
 
     def calc_intent(self, utterance, min_conf=0.5, lang=None, session=None):
@@ -57,9 +67,9 @@ class PadaosExtractor(IntentExtractor):
             modifier = len(self.segmenter.segment(utterance))
             intent["conf"] = 1 / modifier - 0.1
 
-            skill_id = self.get_intent_skill_id(intent["intent_type"])
+            intent_type, skill_id = _unmunge(intent["intent_type"])
             return IntentMatch(intent_service=intent["intent_engine"],
-                               intent_type=intent["intent_type"],
+                               intent_type=intent_type,
                                intent_data=intent,
                                confidence=intent["conf"],
                                skill_id=skill_id)
