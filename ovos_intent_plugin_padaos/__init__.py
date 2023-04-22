@@ -22,14 +22,14 @@ class PadaosExtractor(IntentExtractor):
         lang = lang or self.lang
         container = self._get_engine(lang)
         samples = samples or [entity_name]
-        super().register_entity(entity_name, samples)
+        super().register_entity(entity_name, samples, lang)
         container.add_entity(entity_name, samples)
 
     def register_intent(self, intent_name, samples=None, lang=None):
         lang = lang or self.lang
         container = self._get_engine(lang)
         samples = samples or [intent_name]
-        super().register_intent(intent_name, samples)
+        super().register_intent(intent_name, samples, lang)
         container.add_intent(intent_name, samples)
 
     def calc_intent(self, utterance, min_conf=0.5, lang=None, session=None):
