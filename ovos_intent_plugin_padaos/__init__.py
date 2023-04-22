@@ -1,5 +1,5 @@
 from ovos_intent_plugin_padaos.padaos_engine import IntentContainer
-from ovos_plugin_manager.intents import IntentExtractor, IntentPriority, IntentDeterminationStrategy
+from ovos_plugin_manager.intents import IntentExtractor, IntentPriority, IntentDeterminationStrategy, IntentMatch
 from ovos_utils.log import LOG
 
 
@@ -56,5 +56,11 @@ class PadaosExtractor(IntentExtractor):
             intent["utterance_remainder"] = remainder
             modifier = len(self.segmenter.segment(utterance))
             intent["conf"] = 1 / modifier - 0.1
-            return intent
+
+            skill_id = self.get_intent_skill_id(intent["intent_type"])
+            return IntentMatch(intent_service=intent["intent_engine"],
+                               intent_type=intent["intent_type"],
+                               intent_data=intent,
+                               confidence=intent["conf"],
+                               skill_id=skill_id)
         return None
