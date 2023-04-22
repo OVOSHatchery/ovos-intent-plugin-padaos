@@ -1,3 +1,2 @@
 ovos-plugin-manager
-adapt-parser
-ovos_utils>=0.0.20a3
+ovos_utils>=0.0.20

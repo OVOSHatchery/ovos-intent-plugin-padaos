@@ -1,4 +1,4 @@
-from padaos import IntentContainer
+from ovos_intent_plugin_padaos.padaos_engine import IntentContainer
 from ovos_plugin_manager.intents import IntentExtractor, IntentPriority, IntentDeterminationStrategy
 from ovos_utils.log import LOG
 
@@ -31,6 +31,16 @@ class PadaosExtractor(IntentExtractor):
         samples = samples or [intent_name]
         super().register_intent(intent_name, samples, lang)
         container.add_intent(intent_name, samples)
+
+    def detach_intent(self, intent_name):
+        for intent in self.registered_intents:
+            if intent.name != intent_name:
+                continue
+            LOG.debug("Detaching padaos intent: " + intent_name)
+            for lang in self.engines:
+                with self.lock:
+                    self.engines[lang].remove_intent(intent_name)
+        super().detach_intent(intent_name)
 
     def calc_intent(self, utterance, min_conf=0.5, lang=None, session=None):
         lang = lang or self.lang
