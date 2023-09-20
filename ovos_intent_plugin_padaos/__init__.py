@@ -54,17 +54,15 @@ class PadaosPipelinePlugin(IntentPipelinePlugin):
         container.add_intent(intent_name, samples)
 
     def detach_intent(self, skill_id, intent_name):
-        for intent in self.registered_intents:
-            if intent.name != intent_name or intent.skill_id != skill_id:
-                continue
-            LOG.debug("Detaching padaos intent: " + intent_name)
-            with self.lock:
-                for lang in self.engines:
-                    self.engines[lang].remove_intent(_munge(intent.name,
-                                                            intent.skill_id))
+        LOG.debug("Detaching padaos intent: " + intent_name)
+        with self.lock:
+            for lang in self.engines:
+                self.engines[lang].remove_intent(_munge(intent_name,
+                                                        skill_id))
         super().detach_intent(skill_id, intent_name)
 
     def detach_entity(self, skill_id, entity_name):
+        LOG.debug("Detaching padaos entity: " + entity_name)
         name = _munge(entity_name, skill_id)
         with self.lock:
             for lang in self.engines:
@@ -72,22 +70,16 @@ class PadaosPipelinePlugin(IntentPipelinePlugin):
         super().detach_entity(skill_id, entity_name)
 
     def detach_skill(self, skill_id):
-        super().detach_skill(skill_id)
-
+        LOG.debug("Detaching padaos skill: " + skill_id)
         with self.lock:
             for lang in self.engines:
-                ents = []
-                intents = []
-                for entity_name in self.engines[lang].entity_lines.keys():
-                    if entity_name.endswith(skill_id):
-                        ents.append(entity_name)
-                for intent_name in self.engines[lang].intent_lines.keys():
-                    if intent_name.endswith(skill_id):
-                        intents.append(intent_name)
-                for intent_name in intents:
-                    self.engines[lang].remove_intent(intent_name)
-                for entity_name in ents:
-                    self.engines[lang].remove_entity(entity_name)
+                for entity in (e for e in self.registered_entities if e.skill_id == skill_id):
+                    munged = _munge(entity.name, skill_id)
+                    self.engines[lang].remove_entity(munged)
+                for intent in (e for e in self.registered_intents if e.skill_id == skill_id):
+                    munged = _munge(intent.name, skill_id)
+                    self.engines[lang].remove_intent(munged)
+        super().detach_skill(skill_id)
 
     def calc_intent(self, utterance, min_conf=0.5, lang=None):
         lang = lang or self.lang
