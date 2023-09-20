@@ -1,7 +1,8 @@
-from ovos_intent_plugin_padaos.padaos_engine import IntentContainer
 from ovos_plugin_manager.templates.pipeline import IntentPipelinePlugin, IntentMatch
-from ovos_utils.log import LOG
 from ovos_utils import classproperty
+from ovos_utils.log import LOG
+
+from ovos_intent_plugin_padaos.padaos_engine import IntentContainer
 
 
 def _munge(name, skill_id):
@@ -61,7 +62,32 @@ class PadaosPipelinePlugin(IntentPipelinePlugin):
                 for lang in self.engines:
                     self.engines[lang].remove_intent(_munge(intent.name,
                                                             intent.skill_id))
-        super().detach_intent(intent_name)
+        super().detach_intent(skill_id, intent_name)
+
+    def detach_entity(self, skill_id, entity_name):
+        name = _munge(entity_name, skill_id)
+        with self.lock:
+            for lang in self.engines:
+                self.engines[lang].remove_entity(name)
+        super().detach_entity(skill_id, entity_name)
+
+    def detach_skill(self, skill_id):
+        super().detach_skill(skill_id)
+
+        with self.lock:
+            for lang in self.engines:
+                ents = []
+                intents = []
+                for entity_name in self.engines[lang].entity_lines.keys():
+                    if entity_name.endswith(skill_id):
+                        ents.append(entity_name)
+                for intent_name in self.engines[lang].intent_lines.keys():
+                    if intent_name.endswith(skill_id):
+                        intents.append(intent_name)
+                for intent_name in intents:
+                    self.engines[lang].remove_intent(intent_name)
+                for entity_name in ents:
+                    self.engines[lang].remove_entity(entity_name)
 
     def calc_intent(self, utterance, min_conf=0.5, lang=None):
         lang = lang or self.lang
@@ -69,7 +95,6 @@ class PadaosPipelinePlugin(IntentPipelinePlugin):
         utterance = utterance.strip().lower()
         intent = container.calc_intent(utterance)
         if intent["name"]:
-
             intent_type, skill_id = _unmunge(intent["intent_type"])
             return IntentMatch(intent_service=intent["intent_engine"],
                                intent_type=intent_type,
