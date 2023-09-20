@@ -1,6 +1,7 @@
 from ovos_intent_plugin_padaos.padaos_engine import IntentContainer
-from ovos_plugin_manager.intents import IntentExtractor, IntentPriority, IntentDeterminationStrategy, IntentMatch
+from ovos_plugin_manager.templates.pipeline import IntentPipelinePlugin, IntentMatch
 from ovos_utils.log import LOG
+from ovos_utils import classproperty
 
 
 def _munge(name, skill_id):
@@ -11,15 +12,25 @@ def _unmunge(munged):
     return munged.split(":", 2)
 
 
-class PadaosExtractor(IntentExtractor):
-    def __init__(self, config=None,
-                 strategy=IntentDeterminationStrategy.SEGMENT_MULTI,
-                 priority=IntentPriority.REGEX_MEDIUM,
-                 segmenter=None):
-        super().__init__(config, strategy=strategy,
-                         priority=priority, segmenter=segmenter)
+class PadaosPipelinePlugin(IntentPipelinePlugin):
+
+    def __init__(self, bus, config=None):
+        super().__init__(bus, config)
         self.engines = {}  # lang: IntentContainer
 
+    # plugin api
+    @classproperty
+    def matcher_id(self):
+        return "padaos"
+
+    def match(self, utterances, lang, message):
+        return self.calc_intent(utterances, lang=lang)
+
+    def train(self):
+        # no training step needed
+        return True
+
+    # implementation
     def _get_engine(self, lang=None):
         lang = lang or self.lang
         if lang not in self.engines:
@@ -52,27 +63,18 @@ class PadaosExtractor(IntentExtractor):
                                                             intent.skill_id))
         super().detach_intent(intent_name)
 
-    def calc_intent(self, utterance, min_conf=0.5, lang=None, session=None):
+    def calc_intent(self, utterance, min_conf=0.5, lang=None):
         lang = lang or self.lang
         container = self._get_engine(lang)
         utterance = utterance.strip().lower()
         intent = container.calc_intent(utterance)
         if intent["name"]:
-            remainder = self.get_utterance_remainder(
-                utterance, samples=self.registered_intents[intent["name"]])
-            intent["intent_engine"] = "padaos"
-            intent["intent_type"] = intent.pop("name")
-            intent["utterance"] = utterance
-            intent["utterance_remainder"] = remainder
-            modifier = len(self.segmenter.segment(utterance))
-            intent["conf"] = 1 / modifier - 0.1
 
             intent_type, skill_id = _unmunge(intent["intent_type"])
             return IntentMatch(intent_service=intent["intent_engine"],
                                intent_type=intent_type,
-                               intent_data=intent,
-                               confidence=intent["conf"],
+                               intent_data=intent["entities"],
+                               confidence=1.0,
                                utterance=utterance,
-                               utterance_remainder=intent["utterance_remainder"],
                                skill_id=skill_id)
         return None
